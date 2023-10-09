@@ -1,0 +1,75 @@
+import requests
+
+url = 'https://api.cartolafc.globo.com/atletas/mercado'
+
+cartola_dic = requests.get(url).json()
+
+#Item D:
+# Definindo a formação do Esquema Tático
+defesa, meio, ataque = (0,0,0)
+while True:
+    try:
+        print('escolha a formação:')
+        defesa, meio, ataque = (input("Defesa: "),
+                               input("Meio: "),
+                               input("Ataque: "))
+        defesa = int(defesa)
+        meio = int(meio)
+        ataque = int(ataque)
+        assert defesa + meio + ataque == 10
+        assert 2 < defesa < 6
+        assert 2 < meio < 6
+        assert 0 < ataque < 4
+        break
+    except ValueError:
+        print('Insira no formato (numero numero numero)')
+    except AssertionError as e:
+        print('A formação deve conter 10 jogadores. Sendo: de 3 a 5 defensores; de 3 a 5 meias; de 1 a 3 atacantes.')
+
+existe_laterais = defesa >= 4
+quantidade_lat = 2 if existe_laterais else 0
+quantidade_zag = defesa - quantidade_lat
+
+quant =  {
+    'zag': quantidade_zag,
+    'lat': quantidade_lat,
+    'mei': meio,
+    'ata': ataque,
+    'gol': 1,
+    'tec': 1
+}
+melhores_atletas = {
+    'zag': [],
+    'lat': [],
+    'mei': [],
+    'ata': [],
+    'gol': [],
+    'tec': []
+}
+for atleta in cartola_dic['atletas']:
+    posicao = filter(lambda x:x['id'] == atleta['posicao_id'], cartola_dic['posicoes'].values())
+    posicao = list(posicao)[0]
+    
+    atleta_pont = atleta['media_num'] * atleta['jogos_num']
+    atleta['pontos_num'] = atleta_pont
+    pos = posicao['abreviacao']
+
+    if len(melhores_atletas[pos]) < quant[pos]:
+        melhores_atletas[pos].append(atleta)
+    else:
+        for i, atleta2 in enumerate(melhores_atletas[pos]):
+            if atleta2['pontos_num'] < atleta['pontos_num']:
+                melhores_atletas[pos][i] = atleta
+                break
+    melhores_atletas[pos].sort(key=lambda x: x['pontos_num'], reverse=False)
+
+print('=' * 100)
+print(f'{"Posição".ljust(8," ")} \t {"Nome".ljust(30," ")} \t Time \t\t Pontuação')
+print('=' * 100)
+for pos in melhores_atletas:
+    for atleta in melhores_atletas[pos]:
+        posicao = filter(lambda x:x['id'] == atleta['posicao_id'], cartola_dic['posicoes'].values())
+        posicao = list(posicao)[0]
+        clube = filter(lambda x:x['id'] == atleta['clube_id'], cartola_dic['clubes'].values())
+        clube = list(clube)[0]
+        print(f'{posicao["nome"].ljust(8," ")} \t {atleta["nome"].ljust(30," ")} \t {clube["nome"]} \t {atleta["pontos_num"]}')
